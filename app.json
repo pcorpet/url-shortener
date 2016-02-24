@@ -1,0 +1,6 @@
+{
+  "name": "URL Shortener",
+  "description": "A service to store named URLs and expand them with a simple go/ link.",
+  "image": "heroku/cedar",
+  "addons": []
+}
