@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html ng-app="url-shortener">
+  <head>
+    <title>URL shortener</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.5/angular.min.js"></script>
+    <script>
+    var app = angular.module('url-shortener', []);
+
+    function absoluteUrl(relative) {
+      var a = document.createElement('a');
+      a.href = relative;
+      return a.href;
+    }
+
+    app.controller('newURL', function($scope, $http, $location) {
+      $scope.name = $location.search()['name'];
+      $scope.error = $location.search()['error'];
+
+      $scope.save = function() {
+        if (!$scope.url || !$scope.name) {
+          return;
+        }
+
+        $http.post('/save', {url: $scope.url, name: $scope.name})
+            .success(function(data, status, headers, config) {
+              $scope.error = null;
+              if (data.url) {
+                $scope.short_url = data.url + data.name;
+              } else {
+                $scope.short_url = absoluteUrl(data.name);
+              }
+            })
+            .error(function(data, status, headers, config) {
+              $scope.short_url = null;
+              $scope.error = data.error;
+            });
+      }
+    });
+  </script>
+  </head>
+  <body ng-controller="newURL">
+    URL <input ng-model="url">
+    Name <input ng-model="name">
+     <button type="button" ng-click="save()">Make URL shorter</button>
+    <br/>
+    {{ short_url }}
+    {{ error }}
+  </body>
+</html>
