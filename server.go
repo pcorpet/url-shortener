@@ -6,7 +6,7 @@ import (
 
 	"github.com/gorilla/mux"
 
-  neturl "net/url"
+	neturl "net/url"
 )
 
 type server struct {
@@ -24,13 +24,13 @@ func (s server) Save(response http.ResponseWriter, request *http.Request) {
 		URL  string `json:"url"`
 	}
 	if err := decoder.Decode(&data); err != nil {
-		http.Error(response, `{"error": "Unable to parse json"}`, http.StatusBadRequest)
+		http.Error(response, `{"error":"Unable to parse json"}`, http.StatusBadRequest)
 		return
 	}
 
 	if err := s.DB.SaveURL(data.Name, data.URL); err != nil {
 		if jsonData, ok := marshalJson(response, map[string]string{"error": err.Error()}); ok {
-			http.Error(response, string(jsonData), http.StatusBadRequest)
+			http.Error(response, string(jsonData), http.StatusInternalServerError)
 		}
 		return
 	}
@@ -53,22 +53,22 @@ func (s server) Load(response http.ResponseWriter, request *http.Request) {
 			q := neturl.Values{}
 			q.Add("name", name)
 			q.Add("error", "No such URL yet. Feel free to add one.")
-			http.Redirect(response, request, ".#/?"+q.Encode(), 302)
+			http.Redirect(response, request, ".#/?"+q.Encode(), http.StatusFound)
 		}
 
 		if jsonData, ok := marshalJson(response, map[string]string{"error": err.Error()}); ok {
-			http.Error(response, string(jsonData), http.StatusBadRequest)
+			http.Error(response, string(jsonData), http.StatusInternalServerError)
 		}
 		return
 	}
 
-	http.Redirect(response, request, url, 301)
+	http.Redirect(response, request, url, http.StatusMovedPermanently)
 }
 
 func marshalJson(response http.ResponseWriter, reply map[string]string) ([]byte, bool) {
 	jsonData, err := json.Marshal(reply)
 	if err != nil {
-		http.Error(response, `{"error": "Unable to encode json"}`, http.StatusInternalServerError)
+		http.Error(response, `{"error":"Unable to encode json"}`, http.StatusInternalServerError)
 		return nil, false
 	}
 	return jsonData, true
