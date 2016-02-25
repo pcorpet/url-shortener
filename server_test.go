@@ -15,38 +15,42 @@ import (
 
 func TestServerLoad(t *testing.T) {
 	tests := []struct {
-		desc           string
-		loadURLFormat  string
-		loadURLError   error
-		expectCode     int
-		expectRedirect string
+		desc              string
+		loadURL           string
+		loadURLError      error
+		expectLoadedNames []string
+		expectCode        int
+		expectRedirect    string
 	}{
 		{
-			desc:           "Successful load",
-			loadURLFormat:  "http://github.com/bayesimpact/%s",
-			expectCode:     http.StatusMovedPermanently,
-			expectRedirect: "http://github.com/bayesimpact/wiki",
+			desc:              "Successful load",
+			loadURL:           "http://github.com/bayesimpact/wiki",
+			expectLoadedNames: []string{"wiki"},
+			expectCode:        http.StatusMovedPermanently,
+			expectRedirect:    "http://github.com/bayesimpact/wiki",
 		},
 		{
-			desc:           "Short URL not found",
-			loadURLFormat:  "",
-			loadURLError:   NotFoundError{"wiki"},
-			expectCode:     http.StatusFound,
-			expectRedirect: "/.#/?error=No+such+URL+yet.+Feel+free+to+add+one.&name=wiki",
+			desc:              "Short URL not found",
+			loadURLError:      NotFoundError{"wiki"},
+			expectLoadedNames: []string{"wiki"},
+			expectCode:        http.StatusFound,
+			expectRedirect:    "/.#/?error=No+such+URL+yet.+Feel+free+to+add+one.&name=wiki",
 		},
 		{
-			desc:          "DB load error",
-			loadURLFormat: "",
-			loadURLError:  errors.New("Could not connect to DB"),
-			expectCode:    http.StatusInternalServerError,
+			desc:              "DB load error",
+			loadURLError:      errors.New("Could not connect to DB"),
+			expectLoadedNames: []string{"wiki"},
+			expectCode:        http.StatusInternalServerError,
 		},
 	}
 
 	for _, test := range tests {
+		var loadedNames []string
 		s := &server{
 			DB: &stubDB{
 				loadURL: func(name string) (string, error) {
-					return fmt.Sprintf(test.loadURLFormat, name), test.loadURLError
+					loadedNames = append(loadedNames, name)
+					return test.loadURL, test.loadURLError
 				},
 			},
 		}
@@ -66,6 +70,10 @@ func TestServerLoad(t *testing.T) {
 		if got, want := response.Code, test.expectCode; got != want {
 			t.Errorf("%s: s.Load(...) had response code %d, want %d\n%v", test.desc, got, want, response)
 			continue
+		}
+
+		if !reflect.DeepEqual(loadedNames, test.expectLoadedNames) {
+			t.Errorf("%s: s.Load(...) tried to load %q, wanted %q", test.desc, loadedNames, test.expectLoadedNames)
 		}
 
 		if want := test.expectRedirect; want != "" {
