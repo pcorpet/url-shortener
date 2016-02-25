@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 
@@ -60,6 +61,10 @@ func (s server) Load(response http.ResponseWriter, request *http.Request) {
 			http.Error(response, string(jsonData), http.StatusInternalServerError)
 		}
 		return
+	}
+
+	if q := request.URL.RawQuery; q != "" && !strings.Contains(url, "?") {
+		url += "?" + q
 	}
 
 	http.Redirect(response, request, url, http.StatusMovedPermanently)

@@ -16,6 +16,7 @@ import (
 func TestServerLoad(t *testing.T) {
 	tests := []struct {
 		desc              string
+		request           string
 		loadURL           string
 		loadURLError      error
 		expectLoadedNames []string
@@ -24,13 +25,31 @@ func TestServerLoad(t *testing.T) {
 	}{
 		{
 			desc:              "Successful load",
+			request:           "http://go/wiki",
 			loadURL:           "http://github.com/bayesimpact/wiki",
 			expectLoadedNames: []string{"wiki"},
 			expectCode:        http.StatusMovedPermanently,
 			expectRedirect:    "http://github.com/bayesimpact/wiki",
 		},
 		{
+			desc:              "Forward query string",
+			request:           "http://go/wiki?foo=bar",
+			loadURL:           "http://github.com/bayesimpact/wiki",
+			expectLoadedNames: []string{"wiki"},
+			expectCode:        http.StatusMovedPermanently,
+			expectRedirect:    "http://github.com/bayesimpact/wiki?foo=bar",
+		},
+		{
+			desc:              "Drop query string if the stored URL already has one",
+			request:           "http://go/wiki?foo=bar",
+			loadURL:           "http://github.com/bayesimpact/wiki?go",
+			expectLoadedNames: []string{"wiki"},
+			expectCode:        http.StatusMovedPermanently,
+			expectRedirect:    "http://github.com/bayesimpact/wiki?go",
+		},
+		{
 			desc:              "Short URL not found",
+			request:           "http://go/wiki",
 			loadURLError:      NotFoundError{"wiki"},
 			expectLoadedNames: []string{"wiki"},
 			expectCode:        http.StatusFound,
@@ -38,6 +57,7 @@ func TestServerLoad(t *testing.T) {
 		},
 		{
 			desc:              "DB load error",
+			request:           "http://go/wiki",
 			loadURLError:      errors.New("Could not connect to DB"),
 			expectLoadedNames: []string{"wiki"},
 			expectCode:        http.StatusInternalServerError,
@@ -59,7 +79,7 @@ func TestServerLoad(t *testing.T) {
 		r.HandleFunc("/{name}", s.Load)
 
 		response := httptest.NewRecorder()
-		request, err := http.NewRequest("GET", "http://go/wiki", nil)
+		request, err := http.NewRequest("GET", test.request, nil)
 		if err != nil {
 			t.Errorf("%s: test setup error, impossible to create request: %v", test.desc, err)
 			continue
