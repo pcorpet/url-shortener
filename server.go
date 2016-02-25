@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -26,6 +27,18 @@ func (s server) Save(response http.ResponseWriter, request *http.Request) {
 	}
 	if err := decoder.Decode(&data); err != nil {
 		http.Error(response, `{"error":"Unable to parse json"}`, http.StatusBadRequest)
+		return
+	}
+
+	if data.Name == "" {
+		http.Error(response, `{"error":"Missing name"}`, http.StatusBadRequest)
+		return
+	}
+
+	if data.URL == "" {
+		if jsonData, ok := marshalJson(response, map[string]string{"error": fmt.Sprintf("Missing URL for %q", data.Name)}); ok {
+			http.Error(response, string(jsonData), http.StatusBadRequest)
+		}
 		return
 	}
 
