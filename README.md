@@ -1,6 +1,8 @@
 # url-shortener
 An URL shortener using named URLs.
 
+Tests [![Build status](https://circleci.com/gh/pcorpet/url-shortener.png?circle-token=d1e30f1ceff91832351b06e0433cebfa47409de9)](https://circleci.com/gh/pcorpet/url-shortener)
+
 This is an implementation of an equivalent of go/ used inside Google. Read about it by [Kevin Burke](https://kev.inburke.com/kevin/url-shortener/).
 
 ## Build
