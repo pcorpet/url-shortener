@@ -48,6 +48,22 @@ func TestServerLoad(t *testing.T) {
 			expectRedirect:    "http://github.com/bayesimpact/wiki?go",
 		},
 		{
+			desc:              "Forward subfolder",
+			request:           "http://go/wiki/New-Hire-Resources",
+			loadURL:           "http://github.com/bayesimpact/wiki",
+			expectLoadedNames: []string{"wiki"},
+			expectCode:        http.StatusMovedPermanently,
+			expectRedirect:    "http://github.com/bayesimpact/wiki/New-Hire-Resources",
+		},
+		{
+			desc:              "Forward subfolder and query string",
+			request:           "http://go/wiki/New-Hire-Resources?foo=bar",
+			loadURL:           "http://github.com/bayesimpact/wiki",
+			expectLoadedNames: []string{"wiki"},
+			expectCode:        http.StatusMovedPermanently,
+			expectRedirect:    "http://github.com/bayesimpact/wiki/New-Hire-Resources?foo=bar",
+		},
+		{
 			desc:              "Short URL not found",
 			request:           "http://go/wiki",
 			loadURLError:      NotFoundError{"wiki"},
@@ -76,7 +92,7 @@ func TestServerLoad(t *testing.T) {
 		}
 
 		r := mux.NewRouter()
-		r.HandleFunc("/{name}", s.Load)
+		r.HandleFunc("/{name}{folder:(/.*)?}", s.Load)
 
 		response := httptest.NewRecorder()
 		request, err := http.NewRequest("GET", test.request, nil)
@@ -89,7 +105,6 @@ func TestServerLoad(t *testing.T) {
 
 		if got, want := response.Code, test.expectCode; got != want {
 			t.Errorf("%s: s.Load(...) had response code %d, want %d\n%v", test.desc, got, want, response)
-			continue
 		}
 
 		if !reflect.DeepEqual(loadedNames, test.expectLoadedNames) {
@@ -140,6 +155,13 @@ func TestSave(t *testing.T) {
 			expectCode:      http.StatusBadRequest,
 			expectSavedURLs: map[string]string{},
 			expectBody:      `{"error":"Missing name"}` + "\n",
+		},
+		{
+			desc:            "Name with a slash",
+			body:            `{"name": "bayesimpact/wiki", "url": "http://github.com/bayesimpact/wiki"}`,
+			expectCode:      http.StatusBadRequest,
+			expectSavedURLs: map[string]string{},
+			expectBody:      `{"error":"Name (\"bayesimpact/wiki\") contains an illegal character: \"/?#\""}` + "\n",
 		},
 		{
 			desc:            "Missing URL",

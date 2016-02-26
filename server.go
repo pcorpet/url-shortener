@@ -19,6 +19,11 @@ type server struct {
 	DB database
 }
 
+// illegalChars is a string containing all characters that are illegal in short
+// URL names. They are illegal because they have a special meaning when using
+// the short URL link.
+const illegalChars = "/?#"
+
 func (s server) Save(response http.ResponseWriter, request *http.Request) {
 	decoder := json.NewDecoder(request.Body)
 	var data struct {
@@ -32,6 +37,13 @@ func (s server) Save(response http.ResponseWriter, request *http.Request) {
 
 	if data.Name == "" {
 		http.Error(response, `{"error":"Missing name"}`, http.StatusBadRequest)
+		return
+	}
+
+	if strings.ContainsAny(data.Name, illegalChars) {
+		if jsonData, ok := marshalJson(response, map[string]string{"error": fmt.Sprintf("Name (%q) contains an illegal character: %q", data.Name, illegalChars)}); ok {
+			http.Error(response, string(jsonData), http.StatusBadRequest)
+		}
 		return
 	}
 
@@ -74,6 +86,10 @@ func (s server) Load(response http.ResponseWriter, request *http.Request) {
 			http.Error(response, string(jsonData), http.StatusInternalServerError)
 		}
 		return
+	}
+
+	if folder := mux.Vars(request)["folder"]; folder != "" {
+		url += folder
 	}
 
 	if q := request.URL.RawQuery; q != "" && !strings.Contains(url, "?") {
