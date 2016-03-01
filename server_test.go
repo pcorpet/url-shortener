@@ -192,6 +192,13 @@ func TestSave(t *testing.T) {
 			expectSavedURLs: map[string]string{"wiki": "http://github.com/bayesimpact/wiki"},
 			expectBody:      `{"error":"Could not connect to DB"}` + "\n",
 		},
+		{
+			desc:            "Not an URL",
+			body:            `{"name": "wiki", "url": ":^@$"}`,
+			expectCode:      http.StatusBadRequest,
+			expectSavedURLs: map[string]string{},
+			expectBody:      `{"error":"Not a valid URL: \":^@$\"."}` + "\n",
+		},
 	}
 
 	for _, test := range tests {

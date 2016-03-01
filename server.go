@@ -54,6 +54,13 @@ func (s server) Save(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	if _, err := neturl.Parse(data.URL); err != nil {
+		if jsonData, ok := marshalJson(response, map[string]string{"error": fmt.Sprintf("Not a valid URL: %q.", data.URL)}); ok {
+			http.Error(response, string(jsonData), http.StatusBadRequest)
+		}
+		return
+	}
+
 	if err := s.DB.SaveURL(data.Name, data.URL); err != nil {
 		if jsonData, ok := marshalJson(response, map[string]string{"error": err.Error()}); ok {
 			http.Error(response, string(jsonData), http.StatusInternalServerError)
@@ -88,12 +95,26 @@ func (s server) Load(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if folder := mux.Vars(request)["folder"]; folder != "" {
-		url += folder
+	var u *neturl.URL
+	if u, err = neturl.Parse(url); err != nil {
+		http.Redirect(response, request, url, http.StatusMovedPermanently)
+		return
 	}
 
-	if q := request.URL.RawQuery; q != "" && !strings.Contains(url, "?") {
-		url += "?" + q
+	var tinkered bool
+
+	if folder := mux.Vars(request)["folder"]; folder != "" {
+		u.Path += folder
+		tinkered = true
+	}
+
+	if q := request.URL.RawQuery; q != "" && u.RawQuery == "" {
+		u.RawQuery = q
+		tinkered = true
+	}
+
+	if tinkered {
+		url = u.String()
 	}
 
 	http.Redirect(response, request, url, http.StatusMovedPermanently)
