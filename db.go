@@ -57,15 +57,15 @@ func (d *mongoDatabase) LoadURL(name string) (string, error) {
 		return "", err
 	}
 	var r bson.D
-	c.Find(bson.D{{"name", name}}).One(&r)
-	m := r.Map()
-	if n := m["name"]; n == nil {
+	c.FindId(name).One(&r)
+	if len(r) == 0 {
 		return "", NotFoundError{name}
 	}
-	if url, ok := m["url"].(string); ok {
-		return url, nil
+	url := r.Map()["url"]
+	if s, ok := url.(string); ok {
+		return s, nil
 	}
-	return "", fmt.Errorf("Name is used but with a weird url object: %#v", m["url"])
+	return "", fmt.Errorf("Name is used but with a weird url object: %#v", url)
 }
 
 func (d *mongoDatabase) SaveURL(name string, url string) error {
@@ -73,6 +73,6 @@ func (d *mongoDatabase) SaveURL(name string, url string) error {
 	if err != nil {
 		return err
 	}
-	c.Insert(bson.D{{"name", name}, {"url", url}})
+	c.Insert(bson.D{{"_id", name}, {"url", url}})
 	return nil
 }
