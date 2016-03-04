@@ -87,6 +87,7 @@ func (s server) Load(response http.ResponseWriter, request *http.Request) {
 			q.Add("name", name)
 			q.Add("error", "No such URL yet. Feel free to add one.")
 			http.Redirect(response, request, ".#/?"+q.Encode(), http.StatusFound)
+			return
 		}
 
 		if jsonData, ok := marshalJson(response, map[string]string{"error": err.Error()}); ok {
