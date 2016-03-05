@@ -13,7 +13,7 @@ To create clean binaries, we use Docker. Install docker, then run
 ./build.sh.
 ```
 
-It will generate a `url-shortener` binary that you can deploy.
+It will generate a docker image `lascap/url-shortener` that you can deploy.
 
 ## Configuration
 

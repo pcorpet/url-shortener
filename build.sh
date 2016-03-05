@@ -1,8 +1,9 @@
 #!/bin/bash
-readonly IMAGE=$(cat /dev/urandom | tr -cd 'a-f0-9' | head -c 32)
+readonly CONTAINER_NAME="lascap/url-shortener"
+readonly HASH="$(cat /dev/urandom | tr -cd 'a-f0-9' | head -c 10)"
+readonly IMAGE="${CONTAINER_NAME}-build:${HASH}"
 docker build -t "${IMAGE}" -f Dockerfile.build .
 
-readonly CONTAINER=$(docker create "${IMAGE}")
-docker cp "${CONTAINER}":/go/bin/app url-shortener
-docker rm "${CONTAINER}"
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -e CONTAINER_TAG="${CONTAINER_NAME}:${HASH}" "${IMAGE}"
+
 docker rmi "${IMAGE}"

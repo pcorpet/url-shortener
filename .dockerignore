@@ -1,6 +1,6 @@
 LICENCE
 README.md
 .gitignore
-Dockerfile*
 *.swp
 */*.swp
+Dockerfile.build
