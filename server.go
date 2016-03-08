@@ -40,6 +40,11 @@ func (s server) Save(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	if data.Name == "_" {
+		http.Error(response, `{"error":"Name (\"_\") is reserved for the shortener use"}`, http.StatusBadRequest)
+		return
+	}
+
 	if strings.ContainsAny(data.Name, illegalChars) {
 		if jsonData, ok := marshalJson(response, map[string]string{"error": fmt.Sprintf("Name (%q) contains an illegal character: %q", data.Name, illegalChars)}); ok {
 			http.Error(response, string(jsonData), http.StatusBadRequest)

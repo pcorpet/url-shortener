@@ -164,6 +164,20 @@ func TestSave(t *testing.T) {
 			expectBody:      `{"error":"Name (\"bayesimpact/wiki\") contains an illegal character: \"/?#\""}` + "\n",
 		},
 		{
+			desc:            "Reserved name",
+			body:            `{"name": "_", "url": "http://github.com/bayesimpact/wiki"}`,
+			expectCode:      http.StatusBadRequest,
+			expectSavedURLs: map[string]string{},
+			expectBody:      `{"error":"Name (\"_\") is reserved for the shortener use"}` + "\n",
+		},
+		{
+			desc:            "Successful save when name starts with reserved prefix",
+			body:            `{"name": "_wiki", "url": "http://github.com/bayesimpact/wiki"}`,
+			expectCode:      http.StatusOK,
+			expectSavedURLs: map[string]string{"_wiki": "http://github.com/bayesimpact/wiki"},
+			expectBody:      `{"name":"_wiki"}`,
+		},
+		{
 			desc:            "Missing URL",
 			body:            `{"name": "wiki"}`,
 			expectCode:      http.StatusBadRequest,
