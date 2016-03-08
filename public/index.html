@@ -15,6 +15,7 @@
     app.controller('newURL', function($scope, $http, $location) {
       $scope.name = $location.search()['name'];
       $scope.error = $location.search()['error'];
+      $scope.urls = [];
 
       // internalPagesPrefix is a prefix that is reserved (cannot be used as a
       // shortened URL name) for the pages and method of the shortener itself.
@@ -40,15 +41,47 @@
               $scope.error = data.error;
             });
       }
+
+      $scope.list = function() {
+        $http.post(internalPagesPrefix + '/list')
+            .success(function(data) {
+              $scope.error = null;
+              $scope.urls = data.urls;
+            })
+            .error(function(data) {
+              $scope.urls = [];
+              $scope.error = data.error;
+            });
+      }
     });
   </script>
   </head>
   <body ng-controller="newURL">
-    URL <input ng-model="url">
-    Name <input ng-model="name">
-     <button type="button" ng-click="save()">Make URL shorter</button>
-    <br/>
-    {{ short_url }}
-    {{ error }}
+    <section>
+      URL <input ng-model="url">
+      Name <input ng-model="name">
+       <button type="button" ng-click="save()">Make URL shorter</button>
+      <br/>
+      {{ short_url }}
+    </section>
+
+    <section ng-show="error" ng-bind="error">
+    </section>
+
+    <section>
+      <button type="button" ng-click="list()">List all</button>
+      <table ng-show="urls.length" border="1">
+        <thead><tr>
+          <th>Name</th>
+          <th>Long URL</th>
+        </tr></thead>
+        <tbody>
+          <tr ng-repeat="url in urls">
+            <td ng-bind="url.name"></td>
+            <td ng-bind="url.url"></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
   </body>
 </html>

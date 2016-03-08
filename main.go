@@ -16,6 +16,7 @@ func main() {
 	}
 
 	r := mux.NewRouter()
+	r.HandleFunc("/"+internalPagesPrefix+"/list", s.List).Methods("POST")
 	r.HandleFunc("/"+internalPagesPrefix+"/save", s.Save).Methods("POST")
 	r.HandleFunc("/{name}{folder:(/.*)?}", s.Load)
 	r.HandleFunc("/", func(response http.ResponseWriter, request *http.Request) {

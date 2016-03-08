@@ -8,7 +8,18 @@ import (
 	mgo "gopkg.in/mgo.v2"
 )
 
+// A namedURL is a URL associated with its short name.
+type namedURL struct {
+	// Name is the short name of the URL. It cannot contain /?# nor be "_".
+	Name string `json:"name"`
+	// URL is the long URL that is shortened. It must be a valid URL.
+	URL string `json:"url"`
+}
+
 type database interface {
+	// ListURLs list all URLs that were saved or at least the 100 first ones.
+	ListURLs() ([]namedURL, error)
+
 	// LoadURL loads a URL that was saved previously.
 	LoadURL(name string) (string, error)
 
@@ -49,6 +60,30 @@ func (d *mongoDatabase) collection() (*mgo.Collection, error) {
 		return nil, err
 	}
 	return s.DB("").C("shortURL"), nil
+}
+
+func (d *mongoDatabase) ListURLs() (urls []namedURL, err error) {
+	c, err := d.collection()
+	if err != nil {
+		return nil, err
+	}
+	iter := c.Find(nil).Limit(100).Iter()
+	var result bson.D
+	for iter.Next(&result) {
+		m := result.Map()
+		var url namedURL
+		var ok bool
+		if url.Name, ok = m["_id"].(string); !ok {
+			// Just skip it if you cannot retrieve the info.
+			continue
+		}
+		if url.URL, ok = m["url"].(string); !ok {
+			// Just skip it if you cannot retrieve the info.
+			continue
+		}
+		urls = append(urls, url)
+	}
+	return urls, iter.Close()
 }
 
 func (d *mongoDatabase) LoadURL(name string) (string, error) {

@@ -30,10 +30,7 @@ const illegalChars = "/?#"
 
 func (s server) Save(response http.ResponseWriter, request *http.Request) {
 	decoder := json.NewDecoder(request.Body)
-	var data struct {
-		Name string `json:"name"`
-		URL  string `json:"url"`
-	}
+	var data namedURL
 	if err := decoder.Decode(&data); err != nil {
 		http.Error(response, `{"error":"Unable to parse json"}`, http.StatusBadRequest)
 		return
@@ -133,7 +130,25 @@ func (s server) Load(response http.ResponseWriter, request *http.Request) {
 	http.Redirect(response, request, url, http.StatusMovedPermanently)
 }
 
-func marshalJson(response http.ResponseWriter, reply map[string]string) ([]byte, bool) {
+func (s server) List(response http.ResponseWriter, request *http.Request) {
+	urls, err := s.DB.ListURLs()
+	if err != nil {
+		if jsonData, ok := marshalJson(response, map[string]string{"error": err.Error()}); ok {
+			http.Error(response, string(jsonData), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	if len(urls) == 0 {
+		urls = []namedURL{}
+	}
+
+	if jsonData, ok := marshalJson(response, map[string][]namedURL{"urls": urls}); ok {
+		response.Write(jsonData)
+	}
+}
+
+func marshalJson(response http.ResponseWriter, reply interface{}) ([]byte, bool) {
 	jsonData, err := json.Marshal(reply)
 	if err != nil {
 		http.Error(response, `{"error":"Unable to encode json"}`, http.StatusInternalServerError)
