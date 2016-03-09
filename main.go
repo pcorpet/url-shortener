@@ -16,7 +16,7 @@ func main() {
 	}
 
 	r := mux.NewRouter()
-	r.HandleFunc("/save", s.Save).Methods("POST")
+	r.HandleFunc("/_/save", s.Save).Methods("POST")
 	r.HandleFunc("/{name}{folder:(/.*)?}", s.Load)
 	r.HandleFunc("/", func(response http.ResponseWriter, request *http.Request) {
 		http.ServeFile(response, request, "public/index.html")
