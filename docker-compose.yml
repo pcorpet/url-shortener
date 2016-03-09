@@ -1,18 +1,20 @@
-web:
-  build: .
-  command: 'bash -c ''/app/user/url-shortener'''
-  working_dir: /app/user
-  environment:
-    PORT: 8080
-  ports:
-    - '8080:8080'
-shell:
-  build: .
-  command: bash
-  working_dir: /app/user
-  environment:
-    PORT: 8080
-  ports:
-    - '8080:8080'
-  volumes:
-    - '.:/app/user'
+version: "2"
+services:
+  db:
+    image: mongo
+    expose:
+      - 27017
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+    environment:
+      PORT: 8080
+      MONGODB_URL: db/test
+    command: [./url-shortener]
+    volumes:
+      - ./public:/go/src/app/public
+    ports:
+      - '8080:8080'
+    links:
+      - db
