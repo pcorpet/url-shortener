@@ -16,12 +16,17 @@
       $scope.name = $location.search()['name'];
       $scope.error = $location.search()['error'];
 
+      // internalPagesPrefix is a prefix that is reserved (cannot be used as a
+      // shortened URL name) for the pages and method of the shortener itself.
+      var internalPagesPrefix = '_';
+
       $scope.save = function() {
         if (!$scope.url || !$scope.name) {
           return;
         }
 
-        $http.post('_/save', {url: $scope.url, name: $scope.name})
+        $http.post(internalPagesPrefix + '/save',
+            {url: $scope.url, name: $scope.name})
             .success(function(data, status, headers, config) {
               $scope.error = null;
               if (data.url) {
