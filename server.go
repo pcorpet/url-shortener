@@ -45,7 +45,7 @@ func (s server) Save(response http.ResponseWriter, request *http.Request) {
 	}
 
 	if data.Name == internalPagesPrefix {
-		if jsonData, ok := marshalJson(response, map[string]string{"error", fmt.Sprintf("Name (%q) is reserved for the shortener use", internalPagesPrefix)}); ok {
+		if jsonData, ok := marshalJson(response, map[string]string{"error": fmt.Sprintf("Name (%q) is reserved for the shortener use", internalPagesPrefix)}); ok {
 			http.Error(response, string(jsonData), http.StatusBadRequest)
 		}
 		return
