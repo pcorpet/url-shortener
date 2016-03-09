@@ -11,6 +11,10 @@ import (
 	neturl "net/url"
 )
 
+// internalPagesPrefix is a prefix that is reserved (cannot be used as a
+// shortened URL name) for the pages and method of the shortener itself.
+const internalPagesPrefix = "_"
+
 type server struct {
 	// ShortURLPrefix is an optional prefix to return even shorter URLs than
 	// using the request's hostname and path.
@@ -40,8 +44,11 @@ func (s server) Save(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if data.Name == "_" {
-		http.Error(response, `{"error":"Name (\"_\") is reserved for the shortener use"}`, http.StatusBadRequest)
+	if data.Name == internalPagesPrefix {
+    reply := map[string]string{"error": fmt.Sprintf("Name (%q) is reserved for the shortener use", internalPagesPrefix)}
+		if jsonData, ok := marshalJson(response, reply); ok {
+			http.Error(response, string(jsonData), http.StatusBadRequest)
+		}
 		return
 	}
 
