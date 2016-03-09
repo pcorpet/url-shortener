@@ -13,8 +13,18 @@ RUN curl -sSL https://get.docker.com/ | sh
 RUN mkdir -p /go/src/app
 WORKDIR /go/src/app
 
-COPY . /go/src/app
+# Download a few dependencies that we use so that we benefit a bit more from
+# docker's cache.
+RUN go-wrapper download \
+  github.com/gorilla/context \
+  github.com/gorilla/handlers \
+  github.com/gorilla/mux \
+  gopkg.in/mgo.v2 \
+  gopkg.in/mgo.v2/bson
+
 RUN cp /etc/ssl/certs/ca-certificates.crt /go/src/app
+
+COPY . /go/src/app
 
 RUN go-wrapper download
 RUN go-wrapper install
