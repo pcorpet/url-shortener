@@ -21,7 +21,7 @@
           return;
         }
 
-        $http.post('/save', {url: $scope.url, name: $scope.name})
+        $http.post('_/save', {url: $scope.url, name: $scope.name})
             .success(function(data, status, headers, config) {
               $scope.error = null;
               if (data.url) {
