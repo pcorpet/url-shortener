@@ -143,7 +143,15 @@ func TestServerLoad(t *testing.T) {
 			loadURLError:      NotFoundError{"wiki"},
 			expectLoadedNames: []string{"wiki"},
 			expectCode:        http.StatusFound,
-			expectRedirect:    "/.#/?error=No+such+URL+yet.+Feel+free+to+add+one.&name=wiki",
+			expectRedirect:    "/#/?error=No+such+URL+yet.+Feel+free+to+add+one.&name=wiki",
+		},
+		{
+			desc:              "Short URL not found but uses subfolder",
+			request:           "http://go/wiki/settings",
+			loadURLError:      NotFoundError{"wiki"},
+			expectLoadedNames: []string{"wiki"},
+			expectCode:        http.StatusFound,
+			expectRedirect:    "/#/?error=No+such+URL+yet.+Feel+free+to+add+one.&name=wiki",
 		},
 		{
 			desc:              "DB load error",

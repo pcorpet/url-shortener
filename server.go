@@ -95,7 +95,7 @@ func (s server) Load(response http.ResponseWriter, request *http.Request) {
 			q := neturl.Values{}
 			q.Add("name", name)
 			q.Add("error", "No such URL yet. Feel free to add one.")
-			http.Redirect(response, request, ".#/?"+q.Encode(), http.StatusFound)
+			http.Redirect(response, request, "/#/?"+q.Encode(), http.StatusFound)
 			return
 		}
 
