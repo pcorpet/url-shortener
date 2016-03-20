@@ -28,3 +28,5 @@ _testmain.go
 
 # Our binary
 url-shortener
+# Our release folder
+release

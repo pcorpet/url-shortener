@@ -5,4 +5,4 @@ README.md
 *.sh
 */.*.swp
 Dockerfile.*
-docker-compose.yml
+*.yml

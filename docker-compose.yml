@@ -1,13 +1,11 @@
 version: "2"
 services:
   db:
-    image: mongo
+    image: mongo:latest
     expose:
       - 27017
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile.build
+    image: lascap/url-shortener-dev
     environment:
       PORT: 8080
       MONGODB_URL: db/test
@@ -22,6 +20,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build
+    image: lascap/url-shortener-dev
     volumes:
       - .:/go/src/app/:ro
       - ./release:/go/src/app/release:rw
