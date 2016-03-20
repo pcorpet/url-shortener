@@ -13,8 +13,15 @@ services:
       MONGODB_URL: db/test
     command: [./url-shortener]
     volumes:
-      - ./public:/go/src/app/public
+      - ./public:/go/src/app/public:ro
     ports:
       - '8080:8080'
     links:
       - db
+  builder:
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+    volumes:
+      - .:/go/src/app/:ro
+      - ./release:/go/src/app/release:rw

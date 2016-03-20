@@ -1,6 +1,8 @@
-LICENCE
+LICENSE
+Procfile
 README.md
-.gitignore
-*.swp
-*/*.swp
-Dockerfile.build
+.*
+*.sh
+*/.*.swp
+Dockerfile.*
+docker-compose.yml

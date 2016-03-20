@@ -1,11 +1,14 @@
+# This Dockerfile creates a minimal image. Check out build.sh on how to build
+# the prerequisites for this.
 FROM scratch
 
-COPY url-shortener /app/user/
-COPY ca-certificates.crt /etc/ssl/certs/
-ADD public /app/user/public
+ADD ca-certificates.crt /etc/ssl/certs/
 
 WORKDIR /app/user
 
+ADD url-shortener .
+ADD public ./public
+
 EXPOSE 5000
 
-ENTRYPOINT ["/app/user/url-shortener"]
+ENTRYPOINT ["./url-shortener"]

@@ -1,9 +1,24 @@
 #!/bin/bash
+
 readonly CONTAINER_NAME="lascap/url-shortener"
-readonly HASH="$(cat /dev/urandom | tr -cd 'a-f0-9' | head -c 10)"
-readonly IMAGE="${CONTAINER_NAME}-build:${HASH}"
-docker build -t "${IMAGE}" -f Dockerfile.build .
+set -e
 
-docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -e CONTAINER_TAG="${CONTAINER_NAME}:${HASH}" "${IMAGE}"
+TMPDIR=$(mktemp -d)
+cp -R public "${TMPDIR}/public"
+cp Dockerfile "${TMPDIR}"
 
-docker rmi "${IMAGE}"
+echo "Building binary..."
+mkdir -p release
+docker-compose run --rm -e CGO_ENABLED=0 builder /bin/bash -c "cp /etc/ssl/certs/ca-certificates.crt release && go build -ldflags \"-s\" -a -installsuffix cgo -o release/url-shortener"
+cp release/url-shortener release/ca-certificates.crt "${TMPDIR}"
+
+echo "Packaging Docker image..."
+if [ -n "$1" ]; then
+  readonly TAG="${CONTAINER_NAME}:${1}"
+else
+  # Using "latest".
+  readonly TAG="${CONTAINER_NAME}"
+fi
+docker build -t "${TAG}" "${TMPDIR}" 
+
+rm -rf "${TMPDIR}"

@@ -1,14 +1,11 @@
-# This is the build Dockerfile: it creates an image where we can build the Go
-# binary as well as the release Docker container. It is OK to add many
-# dependencies as needed to compile properly as they won't be released in the
-# final image.
+# This Dockerfile creates an image for easier and cleaner developement: it can
+# be used to run a local demo, run tests or prepare a release. It is OK to add
+# many dependencies as needed to compile properly as they won't be released in
+# the final image.
 FROM golang:1.6
 
 RUN apt-get update -qq
 RUN apt-get install -qqy ca-certificates curl
-
-# Install Docker from Docker Inc. repositories.
-RUN curl -sSL https://get.docker.com/ | sh
 
 RUN mkdir -p /go/src/app
 WORKDIR /go/src/app
@@ -22,19 +19,14 @@ RUN go-wrapper download \
   gopkg.in/mgo.v2 \
   gopkg.in/mgo.v2/bson
 
-RUN cp /etc/ssl/certs/ca-certificates.crt /go/src/app
-
-COPY . /go/src/app
+ADD . .
 
 RUN go-wrapper download
 RUN go-wrapper install
-RUN go test
 
 ENV CGO_ENABLED=0
 RUN go build -ldflags "-s" -a -installsuffix cgo -o url-shortener
 
 VOLUME /var/lib/docker
 
-# NOTE: to run Docker inside a Docker container, you should pass the docker
-# socket with -v /var/run/docker.sock:/var/run/docker.sock
-CMD docker build -f Dockerfile -t "${CONTAINER_TAG}" .
+CMD ["./url-shortener"]
