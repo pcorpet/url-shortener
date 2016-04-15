@@ -67,7 +67,7 @@ func (d *mongoDatabase) ListURLs() (urls []namedURL, err error) {
 	if err != nil {
 		return nil, err
 	}
-	iter := c.Find(nil).Limit(100).Iter()
+	iter := c.Find(nil).Limit(100).Sort("_id").Iter()
 	var result bson.D
 	for iter.Next(&result) {
 		m := result.Map()
