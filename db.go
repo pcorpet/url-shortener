@@ -14,6 +14,8 @@ type namedURL struct {
 	Name string `json:"name"`
 	// URL is the long URL that is shortened. It must be a valid URL.
 	URL string `json:"url"`
+	// Email of users that are allowed to modify this association.
+	Owners []string `json:"owners"`
 }
 
 type database interface {
@@ -24,7 +26,7 @@ type database interface {
 	LoadURL(name string) (string, error)
 
 	// SaveURL saves a URL keyed by a name to be loaded later.
-	SaveURL(name string, url string) error
+	SaveURL(name string, url string, owners []string) error
 }
 
 // A NotFoundError is triggered if a name does not resolve to an URL in the
@@ -81,6 +83,14 @@ func (d *mongoDatabase) ListURLs() (urls []namedURL, err error) {
 			// Just skip it if you cannot retrieve the info.
 			continue
 		}
+		url.Owners = []string{}
+		if owners, ok := m["owners"].([]interface{}); ok && len(owners) > 0 {
+			for _, owner := range owners {
+				if ownerString, ok := owner.(string); ok {
+					url.Owners = append(url.Owners, ownerString)
+				}
+			}
+		}
 		urls = append(urls, url)
 	}
 	return urls, iter.Close()
@@ -103,11 +113,11 @@ func (d *mongoDatabase) LoadURL(name string) (string, error) {
 	return "", fmt.Errorf("Name is used but with a weird url object: %#v", url)
 }
 
-func (d *mongoDatabase) SaveURL(name string, url string) error {
+func (d *mongoDatabase) SaveURL(name string, url string, owners []string) error {
 	c, err := d.collection()
 	if err != nil {
 		return err
 	}
-	c.Insert(bson.D{{"_id", name}, {"url", url}})
+	c.Insert(bson.D{{"_id", name}, {"url", url}, {"owners", owners}})
 	return nil
 }

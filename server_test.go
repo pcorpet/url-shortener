@@ -25,13 +25,21 @@ func TestServerList(t *testing.T) {
 		{
 			desc: "Simple list",
 			listURLs: []namedURL{
-				{Name: "wiki", URL: "http://github.com/bayesimpact/wiki"},
-				{Name: "google", URL: "http://www.google.com"},
+				{
+					Name:   "wiki",
+					URL:    "http://github.com/bayesimpact/wiki",
+					Owners: []string{"pascal@bayesimpact.org"},
+				},
+				{
+					Name:   "google",
+					URL:    "http://www.google.com",
+					Owners: []string{},
+				},
 			},
 			expectCode: http.StatusOK,
 			expectBody: `{"urls":[` +
-				`{"name":"wiki","url":"http://github.com/bayesimpact/wiki"},` +
-				`{"name":"google","url":"http://www.google.com"}` +
+				`{"name":"wiki","url":"http://github.com/bayesimpact/wiki","owners":["pascal@bayesimpact.org"]},` +
+				`{"name":"google","url":"http://www.google.com","owners":[]}` +
 				`]}`,
 			expectListURLsCalls: 1,
 		},
@@ -309,7 +317,7 @@ func TestSave(t *testing.T) {
 		savedURLs := map[string]string{}
 		s := &server{
 			DB: &stubDB{
-				saveURL: func(name string, url string) error {
+				saveURL: func(name string, url string, owners []string) error {
 					savedURLs[name] = url
 					return test.saveURLError
 				},
@@ -347,7 +355,7 @@ func TestSave(t *testing.T) {
 type stubDB struct {
 	listURLs func() ([]namedURL, error)
 	loadURL  func(string) (string, error)
-	saveURL  func(string, string) error
+	saveURL  func(string, string, []string) error
 }
 
 func (s stubDB) ListURLs() ([]namedURL, error) {
@@ -364,9 +372,9 @@ func (s stubDB) LoadURL(name string) (string, error) {
 	return s.loadURL(name)
 }
 
-func (s stubDB) SaveURL(name string, url string) error {
+func (s stubDB) SaveURL(name string, url string, owners []string) error {
 	if s.saveURL == nil {
-		return fmt.Errorf("SaveURL(%q, %q) called", name, url)
+		return fmt.Errorf("SaveURL(%q, %q, %v) called", name, url, owners)
 	}
-	return s.saveURL(name, url)
+	return s.saveURL(name, url, owners)
 }

@@ -71,7 +71,11 @@ func (s server) Save(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if err := s.DB.SaveURL(data.Name, data.URL); err != nil {
+	if user := request.Header.Get("X-Forwarded-User"); user != "" {
+		data.Owners = []string{user}
+	}
+
+	if err := s.DB.SaveURL(data.Name, data.URL, data.Owners); err != nil {
 		if jsonData, ok := marshalJson(response, map[string]string{"error": err.Error()}); ok {
 			http.Error(response, string(jsonData), http.StatusInternalServerError)
 		}
