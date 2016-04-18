@@ -23,6 +23,6 @@ else
   # Using "latest".
   readonly TAG="${CONTAINER_NAME}"
 fi
-docker build -t "${TAG}" "${TMPDIR}" 
+docker build --build-arg GIT_SHA1 -t "${TAG}" "${TMPDIR}"
 
 rm -rf "${TMPDIR}"
