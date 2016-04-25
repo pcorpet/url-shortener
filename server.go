@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -42,7 +43,7 @@ func (s server) Save(response http.ResponseWriter, request *http.Request) {
 	}
 
 	if data.Name == internalPagesPrefix {
-    reply := map[string]string{"error": fmt.Sprintf("Name (%q) is reserved for the shortener use", internalPagesPrefix)}
+		reply := map[string]string{"error": fmt.Sprintf("Name (%q) is reserved for the shortener use", internalPagesPrefix)}
 		if jsonData, ok := marshalJson(response, reply); ok {
 			http.Error(response, string(jsonData), http.StatusBadRequest)
 		}
@@ -114,7 +115,7 @@ func (s server) Load(response http.ResponseWriter, request *http.Request) {
 	var tinkered bool
 
 	if folder := mux.Vars(request)["folder"]; folder != "" {
-		u.Path += folder
+		u.Path = path.Join(u.Path, folder)
 		tinkered = true
 	}
 

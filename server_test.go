@@ -130,6 +130,14 @@ func TestServerLoad(t *testing.T) {
 			expectRedirect:    "http://github.com/bayesimpact/wiki/New-Hire-Resources",
 		},
 		{
+			desc:              "Forward subfolder when URL ends with a /",
+			request:           "http://go/wiki/New-Hire-Resources",
+			loadURL:           "http://en.wikipedia.org/",
+			expectLoadedNames: []string{"wiki"},
+			expectCode:        http.StatusMovedPermanently,
+			expectRedirect:    "http://en.wikipedia.org/New-Hire-Resources",
+		},
+		{
 			desc:              "Forward subfolder and query string",
 			request:           "http://go/wiki/New-Hire-Resources?foo=bar",
 			loadURL:           "http://github.com/bayesimpact/wiki",
