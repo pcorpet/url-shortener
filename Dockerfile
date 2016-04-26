@@ -2,11 +2,12 @@
 # the prerequisites for this.
 FROM scratch
 
-ADD ca-certificates.crt /etc/ssl/certs/
+COPY ca-certificates.crt /etc/ssl/certs/
 
 WORKDIR /app/user
 
-ADD url-shortener public ./
+COPY url-shortener ./
+COPY public ./public/
 
 EXPOSE 5000
 
