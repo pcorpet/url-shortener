@@ -352,10 +352,94 @@ func TestSave(t *testing.T) {
 	}
 }
 
+func TestDelete(t *testing.T) {
+	tests := []struct {
+		desc              string
+		request           string
+		forwardedUser     string
+		deleteURLError    error
+		expectDeletedURLs []string
+		expectCode        int
+		expectBody        string
+	}{
+		{
+			desc:              "Typical delete",
+			request:           "/wiki",
+			forwardedUser:     "lascap",
+			expectDeletedURLs: []string{"wiki", "lascap"},
+			expectCode:        http.StatusOK,
+			expectBody:        `{"success":true}`,
+		},
+		{
+			desc:       "Missing user",
+			request:    "/wiki",
+			expectCode: http.StatusUnauthorized,
+			expectBody: `{"error":"Request with no user"}` + "\n",
+		},
+		{
+			desc:              "DB error",
+			request:           "/wiki",
+			forwardedUser:     "lascap",
+			deleteURLError:    errors.New("failure!"),
+			expectDeletedURLs: []string{"wiki", "lascap"},
+			expectCode:        http.StatusInternalServerError,
+			expectBody:        `{"error":"failure!"}` + "\n",
+		},
+	}
+
+	for _, test := range tests {
+		var deletedURLs []string
+		s := &server{
+			DB: &stubDB{
+				deleteURL: func(name string, url string) error {
+					deletedURLs = append(deletedURLs, name, url)
+					return test.deleteURLError
+				},
+			},
+		}
+
+		r := mux.NewRouter()
+		r.HandleFunc("/{name}", s.Delete).Methods("DELETE")
+
+		response := httptest.NewRecorder()
+		request, err := http.NewRequest("DELETE", fmt.Sprintf("http://go%s", test.request), nil)
+		if err != nil {
+			t.Errorf("%s: test setup error, impossible to create request: %v", test.desc, err)
+			continue
+		}
+		if test.forwardedUser != "" {
+			request.Header.Set("X-Forwarded-User", test.forwardedUser)
+		}
+
+		r.ServeHTTP(response, request)
+
+		if got, want := response.Code, test.expectCode; got != want {
+			t.Errorf("%s: s.Delete(...) had response code %d, want %d\n%v", test.desc, got, want, response)
+			continue
+		}
+
+		if !reflect.DeepEqual(deletedURLs, test.expectDeletedURLs) {
+			t.Errorf("%s: s.Delete(...) deleted these URLs\n%v\nbut wanted those\n%v", test.desc, deletedURLs, test.expectDeletedURLs)
+		}
+
+		if got, want := response.Body.String(), test.expectBody; got != want {
+			t.Errorf("%s: s.Delete(...) returned a body with %q, want %q", test.desc, got, want)
+		}
+	}
+}
+
 type stubDB struct {
-	listURLs func() ([]namedURL, error)
-	loadURL  func(string) (string, error)
-	saveURL  func(string, string, []string) error
+	deleteURL func(string, string) error
+	listURLs  func() ([]namedURL, error)
+	loadURL   func(string) (string, error)
+	saveURL   func(string, string, []string) error
+}
+
+func (s stubDB) DeleteURL(name, user string) error {
+	if s.deleteURL == nil {
+		return errors.New("DeleteURL called")
+	}
+	return s.deleteURL(name, user)
 }
 
 func (s stubDB) ListURLs() ([]namedURL, error) {

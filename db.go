@@ -27,6 +27,10 @@ type database interface {
 
 	// SaveURL saves a URL keyed by a name to be loaded later.
 	SaveURL(name string, url string, owners []string) error
+
+	// DeleteURL deletes a URL keyed by a name only if it's owned by the give
+	// user.
+	DeleteURL(name string, user string) error
 }
 
 // A NotFoundError is triggered if a name does not resolve to an URL in the
@@ -120,4 +124,12 @@ func (d *mongoDatabase) SaveURL(name string, url string, owners []string) error 
 	}
 	c.Insert(bson.D{{"_id", name}, {"url", url}, {"owners", owners}})
 	return nil
+}
+
+func (d *mongoDatabase) DeleteURL(name string, user string) error {
+	c, err := d.collection()
+	if err != nil {
+		return err
+	}
+	return c.Remove(bson.D{{"_id", name}, {"owners", user}})
 }

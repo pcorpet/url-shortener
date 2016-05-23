@@ -71,7 +71,7 @@ func (s server) Save(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if user := request.Header.Get("X-Forwarded-User"); user != "" {
+	if user := userFrom(request); user != "" {
 		data.Owners = []string{user}
 	}
 
@@ -148,9 +148,34 @@ func (s server) List(response http.ResponseWriter, request *http.Request) {
 		urls = []namedURL{}
 	}
 
-	if jsonData, ok := marshalJson(response, map[string][]namedURL{"urls": urls}); ok {
+	result := map[string]interface{}{"urls": urls}
+
+	if user := userFrom(request); user != "" {
+		result["user"] = user
+	}
+
+	if jsonData, ok := marshalJson(response, result); ok {
 		response.Write(jsonData)
 	}
+}
+
+func (s server) Delete(response http.ResponseWriter, request *http.Request) {
+	user := userFrom(request)
+	if user == "" {
+		http.Error(response, `{"error":"Request with no user"}`, http.StatusUnauthorized)
+		return
+	}
+
+	name := mux.Vars(request)["name"]
+
+	if err := s.DB.DeleteURL(name, user); err != nil {
+		if jsonData, ok := marshalJson(response, map[string]string{"error": err.Error()}); ok {
+			http.Error(response, string(jsonData), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	response.Write([]byte(`{"success":true}`))
 }
 
 func marshalJson(response http.ResponseWriter, reply interface{}) ([]byte, bool) {
@@ -160,4 +185,8 @@ func marshalJson(response http.ResponseWriter, reply interface{}) ([]byte, bool)
 		return nil, false
 	}
 	return jsonData, true
+}
+
+func userFrom(request *http.Request) string {
+	return request.Header.Get("X-Forwarded-User")
 }
