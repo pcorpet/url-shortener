@@ -22,6 +22,10 @@ type server struct {
 	ShortURLPrefix string
 
 	DB database
+
+	// SuperUser is a set of user IDs that are considered as owner of any short
+	// links.
+	SuperUser map[string]bool
 }
 
 // illegalChars is a string containing all characters that are illegal in short
@@ -152,6 +156,10 @@ func (s server) List(response http.ResponseWriter, request *http.Request) {
 
 	if user := userFrom(request); user != "" {
 		result["user"] = user
+
+		if s.SuperUser != nil && s.SuperUser[user] {
+			result["superUser"] = true
+		}
 	}
 
 	if jsonData, ok := marshalJson(response, result); ok {
@@ -164,6 +172,9 @@ func (s server) Delete(response http.ResponseWriter, request *http.Request) {
 	if user == "" {
 		http.Error(response, `{"error":"Request with no user"}`, http.StatusUnauthorized)
 		return
+	}
+	if s.SuperUser != nil && s.SuperUser[user] {
+		user = ""
 	}
 
 	name := mux.Vars(request)["name"]

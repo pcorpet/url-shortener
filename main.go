@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -13,6 +14,13 @@ func main() {
 	s := &server{
 		ShortURLPrefix: os.Getenv("SHORT_URL_PREFIX"),
 		DB:             &mongoDatabase{URL: os.Getenv("MONGODB_URL")},
+	}
+
+	if superUsers := strings.TrimSpace(os.Getenv("SUPER_USERS")); superUsers != "" {
+		s.SuperUser = map[string]bool{}
+		for _, superUser := range strings.Split(superUsers, ",") {
+			s.SuperUser[strings.TrimSpace(superUser)] = true
+		}
 	}
 
 	r := mux.NewRouter()

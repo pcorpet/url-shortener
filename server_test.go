@@ -18,6 +18,7 @@ func TestServerList(t *testing.T) {
 		desc                string
 		listURLs            []namedURL
 		listURLsError       error
+		forwardedUser       string
 		expectListURLsCalls int
 		expectCode          int
 		expectBody          string
@@ -56,6 +57,20 @@ func TestServerList(t *testing.T) {
 			expectBody:          `{"error":"Oh oh"}` + "\n",
 			expectListURLsCalls: 1,
 		},
+		{
+			desc:                "User",
+			forwardedUser:       "lascap",
+			expectCode:          http.StatusOK,
+			expectBody:          `{"urls":[],"user":"lascap"}`,
+			expectListURLsCalls: 1,
+		},
+		{
+			desc:                "Super User",
+			forwardedUser:       "SUPER USER",
+			expectCode:          http.StatusOK,
+			expectBody:          `{"superUser":true,"urls":[],"user":"SUPER USER"}`,
+			expectListURLsCalls: 1,
+		},
 	}
 
 	for _, test := range tests {
@@ -67,6 +82,7 @@ func TestServerList(t *testing.T) {
 					return test.listURLs, test.listURLsError
 				},
 			},
+			SuperUser: map[string]bool{"SUPER USER": true},
 		}
 
 		r := mux.NewRouter()
@@ -77,6 +93,9 @@ func TestServerList(t *testing.T) {
 		if err != nil {
 			t.Errorf("%s: test setup error, impossible to create request: %v", test.desc, err)
 			continue
+		}
+		if test.forwardedUser != "" {
+			request.Header.Set("X-Forwarded-User", test.forwardedUser)
 		}
 
 		r.ServeHTTP(response, request)
@@ -385,6 +404,14 @@ func TestDelete(t *testing.T) {
 			expectCode:        http.StatusInternalServerError,
 			expectBody:        `{"error":"failure!"}` + "\n",
 		},
+		{
+			desc:              "Super user",
+			request:           "/wiki",
+			forwardedUser:     "SUPER USER",
+			expectDeletedURLs: []string{"wiki", ""},
+			expectCode:        http.StatusOK,
+			expectBody:        `{"success":true}`,
+		},
 	}
 
 	for _, test := range tests {
@@ -396,6 +423,7 @@ func TestDelete(t *testing.T) {
 					return test.deleteURLError
 				},
 			},
+			SuperUser: map[string]bool{"SUPER USER": true},
 		}
 
 		r := mux.NewRouter()

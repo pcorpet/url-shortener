@@ -15,12 +15,29 @@ To create clean binaries, we use Docker. Install docker, then run
 
 It will generate a docker image `lascap/url-shortener` that you can deploy.
 
+## Authentication
+
+By default every one can follow a shortened link, list links or create a new
+one and noone can edit or delete an old one.
+
+However if by using a reverse proxy in front of the URL shortener that
+authenticates users, you can restrict creating new links, listing and following
+them.
+
+If you use such an authentication proxy, you can forward the user's ID through an `X-Forwarded-User` that will enable new features:
+
+* When creating a link, the owner is recorded.
+* Users can delete their own links.
+* Super users (see Configuration below) may delete any links.
+
 ## Configuration
 
 The following env variables are used:
 * `PORT`: defines the port on which to listen. Defaults to 5000.
 * `MONGODB_URL`: the URL to connect to MongoDB. Format: `[mongodb://][user:pass@]host1[:port1][,host2[:port2],...][/database][?options]`
 * `SHORT_URL_PREFIX`: An URL prefix to display nicer URLs if you have a rewriter enabled, e.g. `http://go/`.
+* `SUPER_USERS`: A comma separated list of user IDs of users that can delete
+  any links.
 
 ## Setup
 

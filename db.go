@@ -29,7 +29,7 @@ type database interface {
 	SaveURL(name string, url string, owners []string) error
 
 	// DeleteURL deletes a URL keyed by a name only if it's owned by the given
-	// user.
+	// user. If user is empty, doesn't check for ownership.
 	DeleteURL(name string, user string) error
 }
 
@@ -131,5 +131,9 @@ func (d *mongoDatabase) DeleteURL(name string, user string) error {
 	if err != nil {
 		return err
 	}
-	return c.Remove(bson.D{{"_id", name}, {"owners", user}})
+	filter := bson.D{{"_id", name}}
+	if user != "" {
+		filter = append(filter, bson.DocElem{"owners", user})
+	}
+	return c.Remove(filter)
 }

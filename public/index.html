@@ -48,6 +48,7 @@
               $scope.error = null;
               $scope.urls = data.urls;
               $scope.user = data.user;
+              $scope.superUser = data.superUser;
             })
             .error(function(data) {
               $scope.urls = [];
@@ -94,13 +95,13 @@
           <tr ng-repeat="url in urls">
             <td ng-bind="url.name"></td>
             <td ng-bind="url.url"></td>
-            <td><ul ng-show="url.owners.length">
-              <li ng-repeat="owner in url.owners">
-                <span ng-bind="owner" ng-hide="owner == user"></span>
-                <button ng-show="owner == user"
-                        ng-click="delete(url.name)">Delete</button>
-              </li>
-            </ul></td>
+            <td>
+              <button ng-show="owner == user || superUser"
+                      ng-click="delete(url.name)">Delete</button>
+              <ul ng-show="url.owners.length">
+                <li ng-repeat="owner in url.owners" ng-bind="owner"></li>
+              </ul>
+            </td>
           </tr>
         </tbody>
       </table>
