@@ -12,6 +12,17 @@
       return a.href;
     }
 
+    app.filter('contains', function() {
+      return function(haystack, needle) {
+        if (!haystack) {
+          return false;
+        }
+        return !!haystack.filter(function(straw) {
+          return straw == needle;
+        }).length;
+      };
+    });
+
     app.controller('newURL', function($scope, $http, $location) {
       $scope.name = $location.search()['name'];
       $scope.error = $location.search()['error'];
@@ -96,7 +107,7 @@
             <td ng-bind="url.name"></td>
             <td ng-bind="url.url"></td>
             <td>
-              <button ng-show="owner == user || superUser"
+              <button ng-show="url.owners | contains: user || superUser"
                       ng-click="delete(url.name)">Delete</button>
               <ul ng-show="url.owners.length">
                 <li ng-repeat="owner in url.owners" ng-bind="owner"></li>
