@@ -19,7 +19,7 @@ type namedURL struct {
 }
 
 type database interface {
-	// ListURLs list all URLs that were saved or at least the 100 first ones.
+	// ListURLs list all URLs that were saved or at least the 5000 first ones.
 	ListURLs() ([]namedURL, error)
 
 	// LoadURL loads a URL that was saved previously.
@@ -73,7 +73,7 @@ func (d *mongoDatabase) ListURLs() (urls []namedURL, err error) {
 	if err != nil {
 		return nil, err
 	}
-	iter := c.Find(nil).Limit(100).Sort("_id").Iter()
+	iter := c.Find(nil).Limit(5000).Sort("_id").Iter()
 	var result bson.D
 	for iter.Next(&result) {
 		m := result.Map()
