@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -79,7 +80,7 @@ func (s server) Save(response http.ResponseWriter, request *http.Request) {
 		data.Owners = []string{user}
 	}
 
-	if err := s.DB.SaveURL(data.Name, data.URL, data.Owners); err != nil {
+	if err := s.DB.SaveURL(context.TODO(), data.Name, data.URL, data.Owners); err != nil {
 		if jsonData, ok := marshalJson(response, map[string]string{"error": err.Error()}); ok {
 			http.Error(response, string(jsonData), http.StatusInternalServerError)
 		}
@@ -98,7 +99,7 @@ func (s server) Save(response http.ResponseWriter, request *http.Request) {
 func (s server) Load(response http.ResponseWriter, request *http.Request) {
 	name := mux.Vars(request)["name"]
 
-	url, err := s.DB.LoadURL(name)
+	url, err := s.DB.LoadURL(context.TODO(), name)
 	if err != nil {
 		if _, ok := err.(NotFoundError); ok {
 			q := neturl.Values{}
@@ -140,7 +141,7 @@ func (s server) Load(response http.ResponseWriter, request *http.Request) {
 }
 
 func (s server) List(response http.ResponseWriter, request *http.Request) {
-	urls, err := s.DB.ListURLs()
+	urls, err := s.DB.ListURLs(context.TODO())
 	if err != nil {
 		if jsonData, ok := marshalJson(response, map[string]string{"error": err.Error()}); ok {
 			http.Error(response, string(jsonData), http.StatusInternalServerError)
@@ -179,7 +180,7 @@ func (s server) Delete(response http.ResponseWriter, request *http.Request) {
 
 	name := mux.Vars(request)["name"]
 
-	if err := s.DB.DeleteURL(name, user); err != nil {
+	if err := s.DB.DeleteURL(context.TODO(), name, user); err != nil {
 		if jsonData, ok := marshalJson(response, map[string]string{"error": err.Error()}); ok {
 			http.Error(response, string(jsonData), http.StatusInternalServerError)
 			return

@@ -1,36 +1,37 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
-	"gopkg.in/mgo.v2/bson"
-
-	mgo "gopkg.in/mgo.v2"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // A namedURL is a URL associated with its short name.
 type namedURL struct {
 	// Name is the short name of the URL. It cannot contain /?# nor be "_".
-	Name string `json:"name"`
+	Name string `json:"name" bson:"_id"`
 	// URL is the long URL that is shortened. It must be a valid URL.
-	URL string `json:"url"`
+	URL string `json:"url" bson:"url"`
 	// Email of users that are allowed to modify this association.
-	Owners []string `json:"owners"`
+	Owners []string `json:"owners" bson: "owners"`
 }
 
 type database interface {
 	// ListURLs list all URLs that were saved or at least the 5000 first ones.
-	ListURLs() ([]namedURL, error)
+	ListURLs(ctx context.Context) ([]namedURL, error)
 
 	// LoadURL loads a URL that was saved previously.
-	LoadURL(name string) (string, error)
+	LoadURL(ctx context.Context, name string) (string, error)
 
 	// SaveURL saves a URL keyed by a name to be loaded later.
-	SaveURL(name string, url string, owners []string) error
+	SaveURL(ctx context.Context, name string, url string, owners []string) error
 
 	// DeleteURL deletes a URL keyed by a name only if it's owned by the given
 	// user. If user is empty, doesn't check for ownership.
-	DeleteURL(name string, user string) error
+	DeleteURL(ctx context.Context, name string, user string) error
 }
 
 // A NotFoundError is triggered if a name does not resolve to an URL in the
@@ -48,92 +49,92 @@ type mongoDatabase struct {
 	//   [mongodb://][user:pass@]host1[:port1][,host2[:port2],...][/database][?options]
 	URL string
 
-	dialed *mgo.Session
+	// Name of the DB to use.
+	DBName string
+
+	// Name of the collection to use.
+	CollectionName string
+
+	connected *mongo.Client
 }
 
-func (d *mongoDatabase) session() (*mgo.Session, error) {
-	if d.dialed == nil {
+func (d *mongoDatabase) client(ctx context.Context) (*mongo.Client, error) {
+	if d.connected == nil {
 		var err error
-		d.dialed, err = mgo.Dial(d.URL)
-		return d.dialed, err
+		d.connected, err = mongo.Connect(ctx, options.Client().ApplyURI(d.URL))
+		return d.connected, err
 	}
-	return d.dialed.Copy(), nil
+	return d.connected, nil
 }
 
-func (d *mongoDatabase) collection() (*mgo.Collection, error) {
-	s, err := d.session()
+func (d *mongoDatabase) collection(ctx context.Context) (*mongo.Collection, error) {
+	c, err := d.client(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return s.DB("").C("shortURL"), nil
+	return c.Database(d.DBName).Collection(d.CollectionName), nil
 }
 
-func (d *mongoDatabase) ListURLs() (urls []namedURL, err error) {
-	c, err := d.collection()
+func (d *mongoDatabase) ListURLs(ctx context.Context) (urls []namedURL, err error) {
+	c, err := d.collection(ctx)
 	if err != nil {
 		return nil, err
 	}
-	iter := c.Find(nil).Limit(5000).Sort("_id").Iter()
-	var result bson.D
-	for iter.Next(&result) {
-		m := result.Map()
-		var url namedURL
-		var ok bool
-		if url.Name, ok = m["_id"].(string); !ok {
-			// Just skip it if you cannot retrieve the info.
-			continue
-		}
-		if url.URL, ok = m["url"].(string); !ok {
-			// Just skip it if you cannot retrieve the info.
-			continue
-		}
-		url.Owners = []string{}
-		if owners, ok := m["owners"].([]interface{}); ok && len(owners) > 0 {
-			for _, owner := range owners {
-				if ownerString, ok := owner.(string); ok {
-					url.Owners = append(url.Owners, ownerString)
-				}
-			}
-		}
-		urls = append(urls, url)
+	iter, err := c.Find(ctx, bson.D{}, options.Find().SetLimit(5000).SetSort(bson.D{{"_id", 1}}))
+	if err != nil {
+		return nil, err
 	}
-	return urls, iter.Close()
+	for iter.Next(ctx) {
+		var result namedURL
+		if err := iter.Decode(&result); err != nil {
+			// Just skip it if you cannot retrieve the info.
+			continue
+		}
+		urls = append(urls, result)
+	}
+	return urls, iter.Close(ctx)
 }
 
-func (d *mongoDatabase) LoadURL(name string) (string, error) {
-	c, err := d.collection()
+func (d *mongoDatabase) LoadURL(ctx context.Context, name string) (string, error) {
+	c, err := d.collection(ctx)
 	if err != nil {
 		return "", err
 	}
-	var r bson.D
-	c.FindId(name).One(&r)
-	if len(r) == 0 {
+	var result namedURL
+	err = c.FindOne(ctx, bson.D{{"_id", name}}).Decode(&result)
+	if err == mongo.ErrNoDocuments {
 		return "", NotFoundError{name}
 	}
-	url := r.Map()["url"]
-	if s, ok := url.(string); ok {
-		return s, nil
+	if err != nil {
+		return "", fmt.Errorf("Could not decode URL object for %v: %w", name, err)
 	}
-	return "", fmt.Errorf("Name is used but with a weird url object: %#v", url)
+	return result.URL, nil
 }
 
-func (d *mongoDatabase) SaveURL(name string, url string, owners []string) error {
-	c, err := d.collection()
+func (d *mongoDatabase) SaveURL(ctx context.Context, name string, url string, owners []string) error {
+	c, err := d.collection(ctx)
 	if err != nil {
 		return err
 	}
-	c.Insert(bson.D{{"_id", name}, {"url", url}, {"owners", owners}})
-	return nil
+	_, err = c.InsertOne(ctx, bson.D{{"_id", name}, {"url", url}, {"owners", owners}})
+	return err
 }
 
-func (d *mongoDatabase) DeleteURL(name string, user string) error {
-	c, err := d.collection()
+func (d *mongoDatabase) DeleteURL(ctx context.Context, name string, user string) error {
+	c, err := d.collection(ctx)
 	if err != nil {
 		return err
 	}
 	filter := bson.D{{"_id", name}}
 	if user != "" {
-		filter = append(filter, bson.DocElem{"owners", user})
+		filter = append(filter, bson.E{"owners", user})
 	}
-	return c.Remove(filter)
+	r, err := c.DeleteOne(ctx, filter)
+	if err != nil {
+		return err
+	}
+	if r.DeletedCount != 1 {
+		return fmt.Errorf("The short URL does not exist: %#v", name)
+	}
+	return nil
 }

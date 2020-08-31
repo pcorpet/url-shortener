@@ -2,7 +2,7 @@
 # be used to run a local demo, run tests or prepare a release. It is OK to add
 # many dependencies as needed to compile properly as they won't be released in
 # the final image.
-FROM golang:1.6
+FROM golang:1.15
 
 RUN apt-get update -qq
 RUN apt-get install -qqy ca-certificates curl
@@ -12,17 +12,17 @@ WORKDIR /go/src/app
 
 # Download a few dependencies that we use so that we benefit a bit more from
 # docker's cache.
-RUN go-wrapper download \
+RUN go get \
   github.com/gorilla/context \
   github.com/gorilla/handlers \
   github.com/gorilla/mux \
-  gopkg.in/mgo.v2 \
-  gopkg.in/mgo.v2/bson
+  go.mongodb.org/mongo-driver/mongo \
+  go.mongodb.org/mongo-driver/bson
 
 ADD . .
 
-RUN go-wrapper download
-RUN go-wrapper install
+RUN go get
+RUN go install
 
 ENV CGO_ENABLED=0
 RUN go build -ldflags "-s" -a -installsuffix cgo -o url-shortener

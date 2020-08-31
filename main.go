@@ -11,9 +11,21 @@ import (
 )
 
 func main() {
+	dbName := os.Getenv("MONGODB_DB_NAME")
+	if dbName == "" {
+		dbName = "url-shortener"
+	}
+	collectionName := os.Getenv("MONGODB_COLLECTION_NAME")
+	if collectionName == "" {
+		collectionName = "shortURL"
+	}
 	s := &server{
 		ShortURLPrefix: os.Getenv("SHORT_URL_PREFIX"),
-		DB:             &mongoDatabase{URL: os.Getenv("MONGODB_URL")},
+		DB:             &mongoDatabase{
+			URL: os.Getenv("MONGODB_URL"),
+			DBName: dbName,
+			CollectionName: collectionName,
+		},
 	}
 
 	if superUsers := strings.TrimSpace(os.Getenv("SUPER_USERS")); superUsers != "" {
@@ -27,7 +39,7 @@ func main() {
 	r.HandleFunc("/"+internalPagesPrefix+"/list", s.List).Methods("POST")
 	r.HandleFunc("/"+internalPagesPrefix+"/save", s.Save).Methods("POST")
 	r.HandleFunc("/"+internalPagesPrefix+"/{name}", s.Delete).Methods("DELETE")
-	r.HandleFunc("/{name}{folder:(/.*)?}", s.Load)
+	r.HandleFunc("/{name}{folder:(?:/.*)?}", s.Load)
 	r.HandleFunc("/", func(response http.ResponseWriter, request *http.Request) {
 		http.ServeFile(response, request, "public/index.html")
 	})

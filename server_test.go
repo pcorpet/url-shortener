@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -209,7 +210,7 @@ func TestServerLoad(t *testing.T) {
 		}
 
 		r := mux.NewRouter()
-		r.HandleFunc("/{name}{folder:(/.*)?}", s.Load)
+		r.HandleFunc("/{name}{folder:(?:/.*)?}", s.Load)
 
 		response := httptest.NewRecorder()
 		request, err := http.NewRequest("GET", test.request, nil)
@@ -463,28 +464,28 @@ type stubDB struct {
 	saveURL   func(string, string, []string) error
 }
 
-func (s stubDB) DeleteURL(name, user string) error {
+func (s stubDB) DeleteURL(ctx context.Context, name, user string) error {
 	if s.deleteURL == nil {
 		return errors.New("DeleteURL called")
 	}
 	return s.deleteURL(name, user)
 }
 
-func (s stubDB) ListURLs() ([]namedURL, error) {
+func (s stubDB) ListURLs(ctx context.Context) ([]namedURL, error) {
 	if s.listURLs == nil {
 		return nil, errors.New("ListURLs called")
 	}
 	return s.listURLs()
 }
 
-func (s stubDB) LoadURL(name string) (string, error) {
+func (s stubDB) LoadURL(ctx context.Context, name string) (string, error) {
 	if s.loadURL == nil {
 		return "", fmt.Errorf("LoadURL(%q) called", name)
 	}
 	return s.loadURL(name)
 }
 
-func (s stubDB) SaveURL(name string, url string, owners []string) error {
+func (s stubDB) SaveURL(ctx context.Context, name string, url string, owners []string) error {
 	if s.saveURL == nil {
 		return fmt.Errorf("SaveURL(%q, %q, %v) called", name, url, owners)
 	}

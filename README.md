@@ -35,6 +35,8 @@ If you use such an authentication proxy, you can forward the user's ID through a
 The following env variables are used:
 * `PORT`: defines the port on which to listen. Defaults to 5000.
 * `MONGODB_URL`: the URL to connect to MongoDB. Format: `[mongodb://][user:pass@]host1[:port1][,host2[:port2],...][/database][?options]`
+* `MONGODB_DB_NAME`: the name of the MongoDB database (default to "url-shortener").
+* `MONGODB_COLLECTION_NAME`: the name of the MongoDB database (default to "shortURL").
 * `SHORT_URL_PREFIX`: An URL prefix to display nicer URLs if you have a rewriter enabled, e.g. `http://go/`.
 * `SUPER_USERS`: A comma separated list of user IDs of users that can delete
   any links.
