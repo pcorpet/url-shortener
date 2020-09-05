@@ -1,0 +1,9 @@
+version: "2"
+services:
+  web:
+    volumes:
+      - ./public:/go/src/app/public:ro
+  builder:
+    volumes:
+      - .:/go/src/app/:ro
+      - ./release:/go/src/app/release:rw

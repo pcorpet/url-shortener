@@ -1,0 +1,47 @@
+version: 2
+jobs:
+  build-and-test:
+    docker:
+      - image: bayesimpact/circleci
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Drop local config
+          command: rm docker-compose.override.yml
+      - run:
+          name: Build Docker images
+          command: docker-compose build builder
+      - run:
+          name: Run tests
+          command: docker-compose run builder go test -v
+  deployment:
+    docker:
+      - image: bayesimpact/circleci
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Drop local config
+          command: rm docker-compose.override.yml
+      - run:
+          name: Build Docker images
+          command: GIT_SHA1=$CIRCLE_SHA1 /bin/bash -x ./build.sh
+      - run:
+          name: Publish to Docker Hub
+          command: |
+            echo "{\"https://index.docker.io/v1/\":{\"auth\":\"$DOCKER_AUTH\",\"email\":\"$DOCKER_EMAIL\"}}" > ~/.dockercfg
+            docker push lascap/url-shortener
+
+workflows:
+  version: 2
+  # This will run for all branches, but not for tags.
+  build-and-test:
+    jobs:
+      - build-and-test
+      - deployment:
+          requires:
+            - build-and-test
+          filters:
+            branches:
+              only: master
