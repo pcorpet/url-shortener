@@ -17,6 +17,9 @@ type namedURL struct {
 	URL string `json:"url" bson:"url"`
 	// Email of users that are allowed to modify this association.
 	Owners []string `json:"owners" bson: "owners"`
+	// Whether we should expand dates in the URL before redirecting.
+	// See https://golang.org/pkg/time/#Time.Format
+	ShouldExpandDates bool `json:"shouldExpandDates" bson:"shouldExpandDates"`
 }
 
 type database interface {
@@ -24,10 +27,10 @@ type database interface {
 	ListURLs(ctx context.Context) ([]namedURL, error)
 
 	// LoadURL loads a URL that was saved previously.
-	LoadURL(ctx context.Context, name string) (string, error)
+	LoadURL(ctx context.Context, name string) (namedURL, error)
 
 	// SaveURL saves a URL keyed by a name to be loaded later.
-	SaveURL(ctx context.Context, name string, url string, owners []string) error
+	SaveURL(ctx context.Context, name string, url string, owners []string, shouldExpandDates bool) error
 
 	// DeleteURL deletes a URL keyed by a name only if it's owned by the given
 	// user. If user is empty, doesn't check for ownership.
@@ -95,28 +98,28 @@ func (d *mongoDatabase) ListURLs(ctx context.Context) (urls []namedURL, err erro
 	return urls, iter.Close(ctx)
 }
 
-func (d *mongoDatabase) LoadURL(ctx context.Context, name string) (string, error) {
+func (d *mongoDatabase) LoadURL(ctx context.Context, name string) (namedURL, error) {
 	c, err := d.collection(ctx)
 	if err != nil {
-		return "", err
+		return namedURL{}, err
 	}
 	var result namedURL
 	err = c.FindOne(ctx, bson.D{{"_id", name}}).Decode(&result)
 	if err == mongo.ErrNoDocuments {
-		return "", NotFoundError{name}
+		return namedURL{}, NotFoundError{name}
 	}
 	if err != nil {
-		return "", fmt.Errorf("Could not decode URL object for %v: %w", name, err)
+		return namedURL{}, fmt.Errorf("Could not decode URL object for %v: %w", name, err)
 	}
-	return result.URL, nil
+	return result, nil
 }
 
-func (d *mongoDatabase) SaveURL(ctx context.Context, name string, url string, owners []string) error {
+func (d *mongoDatabase) SaveURL(ctx context.Context, name string, url string, owners []string, shouldExpandDates bool) error {
 	c, err := d.collection(ctx)
 	if err != nil {
 		return err
 	}
-	_, err = c.InsertOne(ctx, bson.D{{"_id", name}, {"url", url}, {"owners", owners}})
+	_, err = c.InsertOne(ctx, bson.D{{"_id", name}, {"url", url}, {"owners", owners}, {"shouldExpandDates", shouldExpandDates}})
 	return err
 }
 

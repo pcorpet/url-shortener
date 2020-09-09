@@ -5,10 +5,14 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
+
+type realClock struct {}
+func (realClock) Now() time.Time { return time.Now() }
 
 func main() {
 	dbName := os.Getenv("MONGODB_DB_NAME")
@@ -26,6 +30,7 @@ func main() {
 			DBName: dbName,
 			CollectionName: collectionName,
 		},
+		Clock: realClock{},
 	}
 
 	if superUsers := strings.TrimSpace(os.Getenv("SUPER_USERS")); superUsers != "" {

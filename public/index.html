@@ -38,7 +38,7 @@
         }
 
         $http.post(internalPagesPrefix + '/save',
-            {url: $scope.url, name: $scope.name})
+            {url: $scope.url, name: $scope.name, shouldExpandDates: $scope.shouldExpandDates})
             .success(function(data, status, headers, config) {
               $scope.error = null;
               if (data.url) {
@@ -87,6 +87,10 @@
       URL <input ng-model="url">
       Name <input ng-model="name">
        <button type="button" ng-click="save()">Make URL shorter</button>
+      <label title="This uses the go time.Format layout (2006-01-02 15:04:05) to replace numbers in the URL with the date's value when redirected">
+        <input type="checkbox" ng-model="shouldExpandDates" />
+        expand dates
+      </label>
       <br/>
       {{ short_url }}
     </section>
@@ -100,12 +104,14 @@
         <thead><tr>
           <th>Name</th>
           <th>Long URL</th>
+          <th>Expand dates</th>
           <th>Owners</th>
         </tr></thead>
         <tbody>
           <tr ng-repeat="url in urls">
             <td ng-bind="url.name"></td>
             <td ng-bind="url.url"></td>
+            <td ng-bind="url.shouldExpandDates"></td>
             <td>
               <button ng-show="(url.owners | contains: user) || superUser"
                       ng-click="delete(url.name)">Delete</button>
