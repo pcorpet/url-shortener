@@ -10,9 +10,13 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 )
+
+type fakeClock struct { now time.Time }
+func (f fakeClock) Now() time.Time { return f.now }
 
 func TestServerList(t *testing.T) {
 	tests := []struct {
@@ -33,15 +37,16 @@ func TestServerList(t *testing.T) {
 					Owners: []string{"pascal@bayesimpact.org"},
 				},
 				{
-					Name:   "google",
-					URL:    "http://www.google.com",
-					Owners: []string{},
+					Name:              "google",
+					URL:               "http://www.google.com",
+					Owners:            []string{},
+					ShouldExpandDates: true,
 				},
 			},
 			expectCode: http.StatusOK,
 			expectBody: `{"urls":[` +
-				`{"name":"wiki","url":"http://github.com/bayesimpact/wiki","owners":["pascal@bayesimpact.org"]},` +
-				`{"name":"google","url":"http://www.google.com","owners":[]}` +
+				`{"name":"wiki","url":"http://github.com/bayesimpact/wiki","owners":["pascal@bayesimpact.org"],"shouldExpandDates":false},` +
+				`{"name":"google","url":"http://www.google.com","owners":[],"shouldExpandDates":true}` +
 				`]}`,
 			expectListURLsCalls: 1,
 		},
@@ -84,6 +89,7 @@ func TestServerList(t *testing.T) {
 				},
 			},
 			SuperUser: map[string]bool{"SUPER USER": true},
+			Clock: realClock{},
 		}
 
 		r := mux.NewRouter()
@@ -121,6 +127,7 @@ func TestServerLoad(t *testing.T) {
 		request           string
 		loadURL           string
 		loadURLError      error
+		shouldExpandDates bool
 		expectLoadedNames []string
 		expectCode        int
 		expectRedirect    string
@@ -196,15 +203,32 @@ func TestServerLoad(t *testing.T) {
 			expectLoadedNames: []string{"wiki"},
 			expectCode:        http.StatusInternalServerError,
 		},
+		{
+			desc:              "Expand dates",
+			request:           "http://go/okr",
+			loadURL:           "/okr-2006-01",
+			shouldExpandDates: true,
+			expectLoadedNames: []string{"okr"},
+			expectCode:        http.StatusFound,
+			// The test is meant to be run on fake date "2020-09-03".
+			expectRedirect:    "/okr-2020-09",
+		},
+	}
+
+	testTime, err := time.Parse("2006-01-02", "2020-09-03")
+	if err != nil {
+		t.Errorf("Could not parse the testing time: %v", err)
+		return
 	}
 
 	for _, test := range tests {
 		var loadedNames []string
 		s := &server{
+			Clock: fakeClock{now: testTime},
 			DB: &stubDB{
-				loadURL: func(name string) (string, error) {
+				loadURL: func(name string) (namedURL, error) {
 					loadedNames = append(loadedNames, name)
-					return test.loadURL, test.loadURLError
+					return namedURL{URL: test.loadURL, ShouldExpandDates: test.shouldExpandDates}, test.loadURLError
 				},
 			},
 		}
@@ -336,8 +360,9 @@ func TestSave(t *testing.T) {
 	for _, test := range tests {
 		savedURLs := map[string]string{}
 		s := &server{
+			Clock: realClock{},
 			DB: &stubDB{
-				saveURL: func(name string, url string, owners []string) error {
+				saveURL: func(name string, url string, owners []string, shouldExpandDates bool) error {
 					savedURLs[name] = url
 					return test.saveURLError
 				},
@@ -460,8 +485,8 @@ func TestDelete(t *testing.T) {
 type stubDB struct {
 	deleteURL func(string, string) error
 	listURLs  func() ([]namedURL, error)
-	loadURL   func(string) (string, error)
-	saveURL   func(string, string, []string) error
+	loadURL   func(string) (namedURL, error)
+	saveURL   func(string, string, []string, bool) error
 }
 
 func (s stubDB) DeleteURL(ctx context.Context, name, user string) error {
@@ -478,16 +503,16 @@ func (s stubDB) ListURLs(ctx context.Context) ([]namedURL, error) {
 	return s.listURLs()
 }
 
-func (s stubDB) LoadURL(ctx context.Context, name string) (string, error) {
+func (s stubDB) LoadURL(ctx context.Context, name string) (namedURL, error) {
 	if s.loadURL == nil {
-		return "", fmt.Errorf("LoadURL(%q) called", name)
+		return namedURL{}, fmt.Errorf("LoadURL(%q) called", name)
 	}
 	return s.loadURL(name)
 }
 
-func (s stubDB) SaveURL(ctx context.Context, name string, url string, owners []string) error {
+func (s stubDB) SaveURL(ctx context.Context, name string, url string, owners []string, shouldExpandDates bool) error {
 	if s.saveURL == nil {
-		return fmt.Errorf("SaveURL(%q, %q, %v) called", name, url, owners)
+		return fmt.Errorf("SaveURL(%q, %q, %v, %t) called", name, url, owners, shouldExpandDates)
 	}
-	return s.saveURL(name, url, owners)
+	return s.saveURL(name, url, owners, shouldExpandDates)
 }

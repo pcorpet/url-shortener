@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -16,6 +17,10 @@ import (
 // internalPagesPrefix is a prefix that is reserved (cannot be used as a
 // shortened URL name) for the pages and method of the shortener itself.
 const internalPagesPrefix = "_"
+
+type Clock interface {
+	Now() time.Time
+}
 
 type server struct {
 	// ShortURLPrefix is an optional prefix to return even shorter URLs than
@@ -27,6 +32,8 @@ type server struct {
 	// SuperUser is a set of user IDs that are considered as owner of any short
 	// links.
 	SuperUser map[string]bool
+
+	Clock Clock
 }
 
 // illegalChars is a string containing all characters that are illegal in short
@@ -80,7 +87,7 @@ func (s server) Save(response http.ResponseWriter, request *http.Request) {
 		data.Owners = []string{user}
 	}
 
-	if err := s.DB.SaveURL(context.TODO(), data.Name, data.URL, data.Owners); err != nil {
+	if err := s.DB.SaveURL(context.TODO(), data.Name, data.URL, data.Owners, data.ShouldExpandDates); err != nil {
 		if jsonData, ok := marshalJson(response, map[string]string{"error": err.Error()}); ok {
 			http.Error(response, string(jsonData), http.StatusInternalServerError)
 		}
@@ -99,7 +106,7 @@ func (s server) Save(response http.ResponseWriter, request *http.Request) {
 func (s server) Load(response http.ResponseWriter, request *http.Request) {
 	name := mux.Vars(request)["name"]
 
-	url, err := s.DB.LoadURL(context.TODO(), name)
+	loaded, err := s.DB.LoadURL(context.TODO(), name)
 	if err != nil {
 		if _, ok := err.(NotFoundError); ok {
 			q := neturl.Values{}
@@ -114,10 +121,16 @@ func (s server) Load(response http.ResponseWriter, request *http.Request) {
 		}
 		return
 	}
+	url := loaded.URL
+	statusCode := http.StatusMovedPermanently
+	if loaded.ShouldExpandDates {
+		url = s.Clock.Now().Format(url)
+		statusCode = http.StatusFound
+	}
 
 	var u *neturl.URL
 	if u, err = neturl.Parse(url); err != nil {
-		http.Redirect(response, request, url, http.StatusMovedPermanently)
+		http.Redirect(response, request, url, statusCode)
 		return
 	}
 
@@ -137,7 +150,7 @@ func (s server) Load(response http.ResponseWriter, request *http.Request) {
 		url = u.String()
 	}
 
-	http.Redirect(response, request, url, http.StatusMovedPermanently)
+	http.Redirect(response, request, url, statusCode)
 }
 
 func (s server) List(response http.ResponseWriter, request *http.Request) {
